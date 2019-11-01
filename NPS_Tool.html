@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+  <script src="https://cdn.jsdelivr.net/npm/jstat@latest/dist/jstat.min.js"></script>
+
+  <script>
+
+    const average = arr => arr.reduce( ( p, c ) => p + c, 0 ) / arr.length;
+
+    function percentile(arr, p) {
+      arr.sort();
+      if (arr.length === 0) return 0;
+      if (typeof p !== 'number') throw new TypeError('p must be a number');
+      if (p <= 0) return arr[0];
+      if (p >= 1) return arr[arr.length - 1];
+
+      var index = arr.length * p,
+          lower = Math.floor(index),
+          upper = lower + 1,
+          weight = index % 1;
+
+      if (upper >= arr.length) return arr[lower];
+      return arr[lower] * (1 - weight) + arr[upper] * weight;
+    }
+
+    function sample_beta(alpha, beta, size) {
+      var samples = [];
+      var i = 0
+      while(i < size){
+        samples.push(
+          jStat.beta.sample(alpha, beta)
+        );
+        i++
+      }
+      return samples;
+    }
+
+    function NPS(promoters, detractors) {
+      nps = 100.0 * (promoters - detractors)
+      return nps.toFixed(0)
+    }
+
+    function beta_binomial(s, n) {
+      // s = number of successes
+      // n = number of samples
+
+      // set priors
+      var alpha = 1.0;
+      var beta = 1.0;
+      // get the posterior
+      var alpha_s = alpha + s;
+      var beta_s = beta + n - s;
+      return {
+        alpha_s: alpha_s,
+        beta_s: beta_s
+      };
+    }
+
+    function nps_estimate() {
+
+      // get data
+      var promoters = document.getElementById("promoters").value;
+      var passives = document.getElementById("passives").value;
+      var detractors = document.getElementById("detractors").value;
+
+      // cast as floats
+      var promoters = parseFloat(promoters);
+      var passives = parseFloat(passives);
+      var detractors = parseFloat(detractors);
+
+      // P(promoter)
+      var posterior = beta_binomial(promoters, (promoters + passives + detractors))
+      var promoters_posterior = sample_beta(posterior.alpha_s, posterior.beta_s, 30000);
+
+      // P(detractor|~promoter)
+      var posterior = beta_binomial(detractors, (passives + detractors))
+      var conditional_detractors_posterior = sample_beta(posterior.alpha_s, posterior.beta_s, 30000);
+
+      // P(detractor|~promoter) * P(~promoter)
+      var not_promoters_posterior = promoters_posterior.map(
+        function(value) { return 1.0 - value; }
+      );
+
+      var detractors_posterior = [];
+      for(var i=0; i< conditional_detractors_posterior.length; i++) {
+        detractors_posterior.push(
+          conditional_detractors_posterior[i] * not_promoters_posterior[i]
+        );
+      }
+
+      // NPS Posterior
+      var nps_posterior = [];
+      for(var i=0; i< promoters_posterior.length; i++) {
+        var nps_score = NPS(promoters_posterior[i], detractors_posterior[i])
+        nps_posterior.push( nps_score )
+      }
+      console.log(nps_posterior)
+
+      // get percentiles and return results
+      var map = percentile(nps_posterior, 0.5).toFixed(0);
+      var lb = percentile(nps_posterior, 0.025).toFixed(0);
+      var ub = percentile(nps_posterior, 0.975).toFixed(0);
+      var output = `The 95% Credible is ${lb} to ${ub}. The MAP estimate is ${map}.`
+      document.getElementById("results").innerHTML = output;
+    }
+
+  </script>
+
+</head>
+
+<body bgcolor="#3498DB">
+
+  <div style="height:10px"></div>
+  <center><div style="width:60%">
+
+  <h1>Estimate NPS Score</h1>
+
+  <p align="left">
+    Net promoter score is a tool some businesses use to measure cusomter
+    satisfaction. The business will provide a survey with a satisfaction rating
+    0-10 with 10 being "would recommend to a friend". Scores of 9-10 are called
+    "promoters". Scores of 0-6 are called "detractors". All other scores are
+    considered "passives". The idea is that the more 9's and 10's the better!
+  </p>
+  <p align="left">
+    NPS is a quantification of the 0-10 sentiment. It is basically the percentage
+    of promoters minus the percentage of dectractors. The percentage of passives
+    does not feature in the calculation.
+  </p>
+  <p align="left">
+    This tools will take the number of promotors, detractors, and passives and
+    calculate the 95% credible interval for the NPS score of the population using
+    two beta-binomial models.
+  </p>
+  <p align="left">
+  <a href="https://github.com/James-Montgomery/net_promoter_score_widget">Click here for more info about this code and its author.</a>
+  </p>
+
+  <label for="promoters">Number of Promoters</label>
+  <input type="number" id="promoters" value="100"><br>
+  <label for="passives">Number of Passives &nbsp;&nbsp;</label>
+  <input type="number" id="passives" value="100"><br>
+  <label for="detractors">Number of Detractors</label>
+  <input type="number" id="detractors" value="100"><br>
+
+  <p id="results">Results will be displayed here.</p>
+
+  <button onclick="nps_estimate()">Run Test</button>
+
+  </div><center>
+
+</body>
+
+</html>
