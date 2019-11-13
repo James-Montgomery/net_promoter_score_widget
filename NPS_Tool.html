@@ -3,27 +3,15 @@
 
 <head>
 
+  <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({tex2jax: {inlineMath: [['$', '$'], ['\\(', ')\\']]}})
+  </script>
+
+  <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
   <script src="https://cdn.jsdelivr.net/npm/jstat@latest/dist/jstat.min.js"></script>
 
   <script>
-
-    const average = arr => arr.reduce( ( p, c ) => p + c, 0 ) / arr.length;
-
-    function percentile(arr, p) {
-      arr.sort();
-      if (arr.length === 0) return 0;
-      if (typeof p !== 'number') throw new TypeError('p must be a number');
-      if (p <= 0) return arr[0];
-      if (p >= 1) return arr[arr.length - 1];
-
-      var index = arr.length * p,
-          lower = Math.floor(index),
-          upper = lower + 1,
-          weight = index % 1;
-
-      if (upper >= arr.length) return arr[lower];
-      return arr[lower] * (1 - weight) + arr[upper] * weight;
-    }
 
     function sample_beta(alpha, beta, size) {
       var samples = [];
@@ -38,8 +26,8 @@
     }
 
     function NPS(promoters, detractors) {
-      nps = 100.0 * (promoters - detractors)
-      return nps.toFixed(0)
+      nps = promoters - detractors
+      return nps * 100.0
     }
 
     function beta_binomial(s, n) {
@@ -52,6 +40,7 @@
       // get the posterior
       var alpha_s = alpha + s;
       var beta_s = beta + n - s;
+
       return {
         alpha_s: alpha_s,
         beta_s: beta_s
@@ -66,9 +55,9 @@
       var detractors = document.getElementById("detractors").value;
 
       // cast as floats
-      var promoters = parseFloat(promoters);
-      var passives = parseFloat(passives);
-      var detractors = parseFloat(detractors);
+      var promoters = parseInt(promoters);
+      var passives = parseInt(passives);
+      var detractors = parseInt(detractors);
 
       // P(promoter)
       var posterior = beta_binomial(promoters, (promoters + passives + detractors))
@@ -99,9 +88,9 @@
       console.log(nps_posterior)
 
       // get percentiles and return results
-      var map = percentile(nps_posterior, 0.5).toFixed(0);
-      var lb = percentile(nps_posterior, 0.025).toFixed(0);
-      var ub = percentile(nps_posterior, 0.975).toFixed(0);
+      var map = jStat.percentile(nps_posterior, 0.5).toFixed(0);
+      var lb = jStat.percentile(nps_posterior, 0.025).toFixed(0);
+      var ub = jStat.percentile(nps_posterior, 0.975).toFixed(0);
       var output = `The 95% Credible is ${lb} to ${ub}. The MAP estimate is ${map}.`
       document.getElementById("results").innerHTML = output;
     }
@@ -110,42 +99,47 @@
 
 </head>
 
-<body bgcolor="#3498DB">
+<body bgcolor="#1C78F3" link='#00F9FF' vlink='#00F9FF'>
 
   <div style="height:10px"></div>
   <center><div style="width:60%">
 
+  <font color='#ffffff'>
   <h1>Estimate NPS Score</h1>
+  </font>
 
-  <p align="left">
+  <p align="left"><font color='#ffffff'>
     Net promoter score is a tool some businesses use to measure cusomter
     satisfaction. The business will provide a survey with a satisfaction rating
     0-10 with 10 being "would recommend to a friend". Scores of 9-10 are called
     "promoters". Scores of 0-6 are called "detractors". All other scores are
     considered "passives". The idea is that the more 9's and 10's the better!
-  </p>
-  <p align="left">
+  </font></p>
+  <p align="left"><font color='#ffffff'>
     NPS is a quantification of the 0-10 sentiment. It is basically the percentage
     of promoters minus the percentage of dectractors. The percentage of passives
     does not feature in the calculation.
-  </p>
-  <p align="left">
+  </font></p>
+  <p align="left"><font color='#ffffff'>
+    $$\text{NPS Score} = 100 \times \cfrac{ \text{Number of Promoters} - \text{Number of Detractors} }{ \text{Number of Total Responders} }$$
+  </font></p>
+  <p align="left"><font color='#ffffff'>
     This tools will take the number of promotors, detractors, and passives and
     calculate the 95% credible interval for the NPS score of the population using
     two beta-binomial models.
-  </p>
+  </font></p>
   <p align="left">
   <a href="https://github.com/James-Montgomery/net_promoter_score_widget">Click here for more info about this code and its author.</a>
   </p>
 
-  <label for="promoters">Number of Promoters</label>
+  <label for="promoters"><font color='#ffffff'>Number of Promoters</font></label>
   <input type="number" id="promoters" value="100"><br>
-  <label for="passives">Number of Passives &nbsp;&nbsp;</label>
+  <label for="passives"><font color='#ffffff'>Number of Passives &nbsp;&nbsp;</font></label>
   <input type="number" id="passives" value="100"><br>
-  <label for="detractors">Number of Detractors</label>
+  <label for="detractors"><font color='#ffffff'>Number of Detractors</font></label>
   <input type="number" id="detractors" value="100"><br>
 
-  <p id="results">Results will be displayed here.</p>
+  <font color='#ffffff'><p id="results">Results will be displayed here.</p></font>
 
   <button onclick="nps_estimate()">Run Test</button>
 
